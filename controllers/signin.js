@@ -1,5 +1,4 @@
-const jwt = require('jsonwebtoken');
-// const redisClient = require('../middleware/authorization').redisClient();
+const { createSessions } = require('../services/jwtauth');
 
 // Setup Redis
 const redis = require('redis');
@@ -37,33 +36,9 @@ const getAuthTokenId = (req, res) => {
       return res.status(400).json('Unauthorized');
     }
 
-    return res.json({id: reply});
+    return res.json({userId: reply});
   });
 }
-
-const signToken = (email) => {
-  var jwtPayload = { email };
-
-  // TODO: store this key in .env like process.env.JWT_SECRET
-  return jwt.sign(jwtPayload, 'secret', { expiresIn: '2 days'});
-}
-
-const setToken = (token, id) => {
-  // token as key, id as value
-  return Promise.resolve(redisClient.set(token, id))
-}
-
-const createSessions = (user) => {
-  // JWT Token and return user data
-  const { email, id } = user;
-  const token = signToken(email);
-
-  return setToken(token, id)
-    .then(() =>  { return {success: 'true', userId: id, token: token }})
-    .catch(error => console.log(error));
-
-}
-
 const signinAuthentication = (db, bcrypt) => (req, res) => {
   const { authorization } = req.headers;
 
@@ -76,7 +51,10 @@ const signinAuthentication = (db, bcrypt) => (req, res) => {
         : Promise.reject(data);
       })
       .then(session => res.json(session))
-      .catch(error => res.status(400).json("wrong credentials"));
+      .catch(error => {
+        console.log(error);
+        res.status(400).json("wrong credentials")
+      });
 }
 
 const signout = () => (req, res) => {
