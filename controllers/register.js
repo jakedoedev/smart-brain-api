@@ -1,3 +1,5 @@
+const { createSessions } = require('../services/jwtauth');
+
 const handleRegister = (req, res, db, bcrypt) => {
   const { email, name, password } = req.body;
   if (!email || !name || !password) {
@@ -5,11 +7,11 @@ const handleRegister = (req, res, db, bcrypt) => {
   }
 
   const hash = bcrypt.hashSync(password);
-    db.transaction(trx => {
-      trx.insert({
-        hash: hash,
-        email: email
-      })
+  db.transaction(trx => {
+    trx.insert({
+      hash: hash,
+      email: email
+    })
       .into('login')
       .returning('email')
       .then(loginEmail => {
@@ -21,12 +23,14 @@ const handleRegister = (req, res, db, bcrypt) => {
             joined: new Date()
           })
           .then(user => {
-            res.json(user[0]);
+            createSessions(user[0])
+            .then(data => res.json(data))
+            .catch(console.log);
           })
       })
       .then(trx.commit)
       .catch(trx.rollback)
-    })
+  })
     .catch(err => {
       console.log(err);
       res.status(400).json('unable to register');
